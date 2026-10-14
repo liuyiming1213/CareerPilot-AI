@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CareerPilot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f2f5; color:#1f2937; }
+  .card { background:#fff; border-radius:12px; padding:24px; box-shadow:0 4px 16px rgba(0,0,0,.06); }
+
+  /* Auth */
+  #authWrap { min-height:100vh; display:flex; justify-content:center; align-items:center; }
+  #authCard { width:380px; }
+  #authCard h1 { text-align:center; margin-bottom:6px; }
+  #authCard p.sub { text-align:center; color:#6b7280; margin-bottom:18px; font-size:14px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tab { flex:1; text-align:center; padding:8px; border-radius:8px; cursor:pointer; color:#6b7280; }
+  .tab.active { background:#2563eb; color:#fff; }
+  label { display:block; font-size:13px; margin:10px 0 5px; color:#374151; }
+  input,select,textarea { width:100%; padding:9px 11px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; }
+  textarea { min-height:60px; resize:vertical; }
+  button.main { width:100%; margin-top:16px; padding:11px; background:#2563eb; color:#fff; border:0; border-radius:8px; font-size:15px; cursor:pointer; }
+  button.main:hover { background:#1d4ed8; }
+  .msg { margin-top:10px; font-size:13px; text-align:center; min-height:16px; }
+  .err { color:#dc2626; } .ok { color:#16a34a; }
+
+  /* App shell */
+  #app { display:none; max-width:960px; margin:0 auto; padding:16px; }
+  header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  header h1 { font-size:20px; }
+  nav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  nav button { padding:8px 14px; border:1px solid #d1d5db; background:#fff; border-radius:8px; cursor:pointer; font-size:14px; }
+  nav button.on { background:#2563eb; color:#fff; border-color:#2563eb; }
+  section { display:none; }
+  section.on { display:block; margin-bottom:20px; }
+  h2 { font-size:16px; margin-bottom:12px; }
+  button.small { padding:6px 12px; margin-top:8px; background:#2563eb; color:#fff; border:0; border-radius:6px; cursor:pointer; }
+  button.ghost { background:#fff; color:#2563eb; border:1px solid #2563eb; }
+  ul { padding-left:20px; }
+  li { margin:4px 0; font-size:14px; }
+  pre { background:#0f172a; color:#e2e8f0; padding:12px; border-radius:8px; overflow:auto; font-size:13px; white-space:pre-wrap; max-height:280px; }
+  #chatOut { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; min-height:120px; max-height:320px; overflow:auto; font-size:14px; line-height:1.7; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<!-- ===== 登录/注册 ===== -->
+<div id="authWrap">
+  <div class="card" id="authCard">
+    <h1>CareerPilot 求职助手</h1>
+    <p class="sub">多智能体 · Agent Tool Calling · Agentic RAG</p>
+    <div class="tabs"><div id="tLogin" class="tab active">登录</div><div id="tReg" class="tab">注册</div></div>
+
+    <label>用户名</label>
+    <input id="username" placeholder="用户名">
+    <label>密码</label>
+    <input id="password" type="password" placeholder="密码">
+    <button class="main" id="authBtn">登录</button>
+    <div class="msg err" id="authMsg"></div>
+  </div>
+</div>
+
+<!-- ===== 主面板 ===== -->
+<div id="app">
+  <header>
+    <h1>CareerPilot</h1>
+    <button class="small ghost" id="logoutBtn">退出登录</button>
+  </header>
+  <nav>
+    <button class="on" data-sec="resumes">简历</button>
+    <button data-sec="jobs">岗位</button>
+    <button data-sec="match">匹配</button>
+    <button data-sec="chat">聊天</button>
+    <button data-sec="memory">记忆</button>
+  </nav>
+
+  <!-- 简历 -->
+  <section id="sec-resumes" class="on">
+    <h2>我的简历</h2>
+    <div class="card">
+      <label>新增简历（文本）</label>
+      <input id="rTitle" placeholder="标题，如：后端简历">
+      <textarea id="rText" placeholder="粘贴简历正文…"></textarea>
+      <button class="small" onclick="addResume()">保存简历</button>
+      <label>或上传 PDF 简历</label>
+      <div class="row"><input type="file" id="rPdf" accept="application/pdf,application/msword,.docx"><button class="small" onclick="uploadResume()">上传 PDF</button></div>
+      <div class="msg" id="rMsg"></div>
+    </div>
+    <div class="card" style="margin-top:12px"><ul id="resumeList"><li>—</li></ul></div>
+  </section>
+
+  <!-- 岗位 -->
+  <section id="sec-jobs">
+    <h2>我的岗位 JD</h2>
+    <div class="card">
+      <label>新增岗位 JD</label>
+      <input id="jTitle" placeholder="岗位名，如：Python 后端工程师">
+      <input id="jCompany" placeholder="公司名（可选）">
+      <textarea id="jText" placeholder="粘贴 JD 正文…"></textarea>
+      <button class="small" onclick="addJob()">保存 JD</button>
+      <div class="msg" id="jMsg"></div>
+    </div>
+    <div class="card" style="margin-top:12px"><ul id="jobList"><li>—</li></ul></div>
+  </section>
+
+  <!-- 匹配 -->
+  <section id="sec-match">
+    <h2>多智能体岗位匹配</h2>
+    <div class="card">
+      <label>选择简历</label><select id="mResume"></select>
+      <label>选择岗位 JD</label><select id="mJob"></select>
+      <button class="main" onclick="runMatch()">开始匹配</button>
+      <div class="msg" id="mMsg"></div>
+      <pre id="matchOut" style="margin-top:12px"></pre>
+    </div>
+  </section>
+
+  <!-- 聊天 -->
+  <section id="sec-chat">
+    <h2>统一聊天（流式）</h2>
+    <div class="card">
+      <div id="chatOut"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="chatInput" placeholder="输入问题，回车发送；可试「帮我匹配简历和岗位」「准备面试」…">
+        <button class="small" id="chatBtn">发送</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 记忆 -->
+  <section id="sec-memory">
+    <h2>记忆快照</h2>
+    <div class="card">
+      <button class="small" onclick="loadMemory()">刷新记忆快照</button>
+      <pre id="memoryOut" style="margin-top:12px"></pre>
+    </div>
+  </section>
+</div>
+
+<script>
+const API = '/api/careerpilot';
+const token = () => localStorage.getItem('cp_token');
+const uid = () => localStorage.getItem('cp_uid') || 'u1';
+
+async function api(path, {method='GET', body, form=false}={}) {
+  const headers = {};
+  if (!form) headers['Content-Type'] = 'application/json';
+  if (token()) headers['Authorization'] = `Bearer ${token()}`;
+  const resp = await fetch(API + path, {method, headers, body: body && !form ? JSON.stringify(body) : body});
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.msg || data.detail || `请求失败(${data.code || resp.status})`);
+  return data;
+}
+
+/* ---- 登录 / 注册 ---- */
+let authMode = 'login';
+function setMode(m) { authMode = m;
+  document.getElementById('tLogin').classList.toggle('active', m==='login');
+  document.getElementById('tReg').classList.toggle('active', m==='register');
+  document.getElementById('authBtn').textContent = m==='login' ? '登录' : '注册';
+}
+document.getElementById('tLogin').onclick = () => setMode('login');
+document.getElementById('tReg').onclick = () => setMode('register');
+
+async function authSubmit() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const msg = document.getElementById('authMsg');
+  if (!username || !password) return msg.textContent='请输入用户名和密码';
+  try {
+    if (authMode === 'register') {
+      await api('/auth/register', {method:'POST', body:{username, password}});
+      // 注册成功后自动切到登录，提示用账号登录
+      msg.className='msg ok'; msg.textContent='注册成功，请用该账号登录'; setMode('login'); return;
+    }
+    const d = await api('/auth/login', {method:'POST', body:{username, password}});
+    localStorage.setItem('cp_token', d.access_token);
+    localStorage.setItem('cp_uid', String(d.user_id));
+    msg.textContent='';
+    enterApp();
+  } catch (e) { msg.className='msg err'; msg.textContent=e.message; }
+}
+document.getElementById('authBtn').onclick = authSubmit;
+document.getElementById('password').addEventListener('keydown', e=>{ if(e.key==='Enter') authSubmit(); });
+
+/* ---- 主面板 ---- */
+function enterApp() {
+  document.getElementById('authWrap').style.display='none';
+  document.getElementById('app').style.display='block';
+  loadResumes(); loadJobs();
+}
+document.getElementById('logoutBtn').onclick = () => {
+  localStorage.removeItem('cp_token'); localStorage.removeItem('cp_uid');
+  document.getElementById('app').style.display='none';
+  document.getElementById('authWrap').style.display='flex';
+  document.getElementById('authMsg').textContent='';
+};
+// tab 切换
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('section').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  document.getElementById('sec-'+b.dataset.sec).classList.add('on');
+  if (b.dataset.sec==='match') loadMatchOptions();
+  if (b.dataset.sec==='memory') loadMemory();
+});
+
+/* ---- 简历 ---- */
+async function loadResumes() {
+  try {
+    const list = await api('/resumes');
+    document.getElementById('resumeList').innerHTML = list.length
+      ? list.map(r=>`<li>#${r.id} · ${r.title}（${new Date(r.created_at).toLocaleString()}）</li>`).join('')
+      : '<li>暂无简历。</li>';
+  } catch(e){ document.getElementById('resumeList').innerHTML=`<li class="err">${e.message}</li>`; }
+}
+async function addResume() {
+  const msg=document.getElementById('rMsg'),
+    title=document.getElementById('rTitle').value.trim(),
+    text=document.getElementById('rText').value.trim();
+  if(!title||!text) return msg.textContent='请填标题和正文';
+  try { await api('/resumes',{method:'POST',body:{title,text}}); msg.className='msg ok'; msg.textContent='已保存';
+    document.getElementById('rText').value=''; loadResumes();
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+}
+async function uploadResume() {
+  const msg=document.getElementById('rMsg'), f=document.getElementById('rPdf').files[0];
+  if(!f) return msg.textContent='请选择 PDF 文件';
+  const fd=new FormData(); fd.append('file', f);
+  try { await api('/resumes/upload',{method:'POST',body:fd,form:true}); msg.className='msg ok'; msg.textContent='PDF 已解析并保存'; loadResumes();
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+}
+/* ---- 岗位 ---- */
+async function loadJobs() {
+  try {
+    const list = await api('/jobs');
+    document.getElementById('jobList').innerHTML = list.length
+      ? list.map(j=>`<li>#${j.id} · ${j.title}（${j.company||'无公司'}）</li>`).join('')
+      : '<li>暂无岗位。</li>';
+  } catch(e){ document.getElementById('jobList').innerHTML=`<li class="err">${e.message}</li>`; }
+}
+async function addJob() {
+  const msg=document.getElementById('jMsg'),
+    title=document.getElementById('jTitle').value.trim(),
+    text=document.getElementById('jText').value.trim(),
+    company=document.getElementById('jCompany').value.trim();
+  if(!title||!text) return msg.textContent='请填岗位名和 JD 正文';
+  try { await api('/jobs',{method:'POST',body:{title,text,company}}); msg.className='msg ok'; msg.textContent='已保存';
+    document.getElementById('jText').value=''; loadJobs();
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+}
+/* ---- 匹配 ---- */
+async function loadMatchOptions() {
+  try {
+    const rs=await api('/resumes'), js=await api('/jobs');
+    document.getElementById('mResume').innerHTML = rs.map(r=>`<option value="${r.id}">#${r.id} ${r.title}</option>`).join('')||'<option value="">（先创建简历）</option>';
+    document.getElementById('mJob').innerHTML = js.map(j=>`<option value="${j.id}">#${j.id} ${j.title}</option>`).join('')||'<option value="">（先创建 JD）</option>';
+  } catch(e){}
+}
+async function runMatch() {
+  const msg=document.getElementById('mMsg'), out=document.getElementById('matchOut'),
+    resume_id=document.getElementById('mResume').value, job_id=document.getElementById('mJob').value;
+  if(!resume_id||!job_id) return msg.textContent='请先选择简历和岗位';
+  msg.className='msg'; msg.textContent='匹配中，调用多智能体 + 本地 BGE/重排模型…';
+  try {
+    const d=await api('/jobs/match',{method:'POST',body:{resume_id:Number(resume_id),job_id:Number(job_id)}});
+    out.textContent =
+      `回答：\n${d.answer}\n\n`+
+      `执行 Agent：${(d.used_agents||[]).join(', ')||'（规则兜底）'}\n`+
+      `执行工具：${(d.used_tools||[]).join(', ')||'（无）'}\n\n`+
+      `匹配分析：\n${JSON.stringify(d.match_analysis||{},null,2)}\n\n`+
+      `事实校验：\n${JSON.stringify(d.fact_check||{},null,2)}`;
+    msg.className='msg ok'; msg.textContent='匹配完成';
+  } catch(e){ msg.className='msg err'; msg.textContent=e.message; }
+}
+/* ---- 聊天（SSE 流式）---- */
+async function sendChat() {
+  const input=document.getElementById('chatInput'), msg=input.value.trim();
+  if(!msg) return;
+  const box=document.getElementById('chatOut');
+  box.innerHTML += `<div style="color:#2563eb;font-weight:600">你：${escapeHtml(msg)}</div>`;
+  input.value='';
+  const cur=box.innerHTML; box.innerHTML += `<div id="streamLine" class="spinner" style="color:#6b7280">正在思考…</div>`;
+  box.scrollTop=box.scrollHeight;
+  let line=document.getElementById('streamLine');
+  try {
+    // 用一个"稳定的会话 id"（存 localStorage），这样同一会话的历史才能累积、
+    // 模型才能记住之前说的话；不要每条消息都生成新 id。
+    let cvId = localStorage.getItem('cp_cv');
+    if (!cvId) { cvId = 'web-' + Date.now(); localStorage.setItem('cp_cv', cvId); }
+    const resp=await fetch(`${API}/chat/stream`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token()}`},
+      body:JSON.stringify({user_id:uid(),conversation_id:cvId,message:msg})});
+    if(!resp.body) throw new Error('无法读取流');
+    const reader=resp.body.getReader(), dec=new TextDecoder(); let buf='';
+    let full='';
+    while(true){ const {done,value}=await reader.read(); if(done)break; buf+=dec.decode(value,{stream:true});
+      let i; while((i=buf.indexOf('\n\n'))>=0){ const chunk=buf.slice(0,i); buf=buf.slice(i+2);
+        const dataLine=chunk.split('\n').find(l=>l.startsWith('data: '));
+        if(dataLine){ let e; try{e=JSON.parse(dataLine.slice(6));}catch(_){continue;}
+          if(e.type==='start'){ line.textContent=''; }
+          else if(e.type==='chunk'){ full+=e.content; line.innerHTML='<div style="color:#111827">'+escapeHtml(full)+'</div>'; box.scrollTop=box.scrollHeight; }
+          else if(e.type==='error'){ line.innerHTML='<div class="err">'+escapeHtml(e.msg||'出错了')+'</div>'; }
+          else if(e.type==='done'){ break; }
+        }
+      }
+    }
+  } catch(e){ line.innerHTML=`<div class="err">${escapeHtml(e.message)}</div>`; }
+}
+document.getElementById('chatBtn').onclick=sendChat;
+document.getElementById('chatInput').addEventListener('keydown',e=>{ if(e.key==='Enter') sendChat(); });
+/* ---- 记忆 ---- */
+async function loadMemory(){
+  const out=document.getElementById('memoryOut');
+  try{ const d=await api(`/memory?conversation_id=${encodeURIComponent('web-'+Date.now())}`); out.textContent=JSON.stringify(d,null,2); }
+  catch(e){ out.textContent='读取失败：'+e.message; }
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// 已登录则直接进主面板
+if (token()) enterApp();
+</script>
+</body>
+</html>
